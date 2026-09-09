@@ -95,6 +95,13 @@ jobs:
           insecure = any(params.get(k, ["0"])[0] in ("1", "true", "yes")
                          for k in ("insecure", "allowInsecure", "allow_insecure"))
           alpn = params.get("alpn", [""])[0]
+          # Reality 相关参数: 认 pcs 或 pbk 作为 public_key; 也认 sid/fp/flow/type
+          pbk = params.get("pbk", [""])[0] or params.get("pcs", [""])[0]
+          sid = params.get("sid", [""])[0]
+          fp = params.get("fp", [""])[0]
+          flow = params.get("flow", [""])[0]
+          ptype = params.get("type", [""])[0] or "tcp"
+          security = params.get("security", [""])[0]
 
           out = {"type": proto, "tag": "proxy-out"}
           if proto == "vmess":
@@ -126,6 +133,27 @@ jobs:
               out["tls"] = {"enabled": True, "server_name": sni or server, "insecure": insecure}
               if alpn:
                   out["tls"]["alpn"] = [alpn]
+              if proto == "vless":
+                  # VLESS: 支持 Reality (认 pbk 或 pcs 为 public_key) 与 flow/fingerprint/transport
+                  is_reality = bool(pbk) and (security == "reality" or flow or True)
+                  if pbk:
+                      out["tls"]["reality"] = {
+                          "enabled": True,
+                          "public_key": pbk,
+                          "short_id": sid or "",
+                      }
+                      out["tls"]["server_name"] = sni or server
+                      is_reality = True
+                  if flow:
+                      out["flow"] = flow
+                  if fp:
+                      out["tls"]["utls"] = {"enabled": True, "fingerprint": fp}
+                  if ptype and ptype != "tcp":
+                      out["transport"] = {
+                          "type": ptype,
+                          "path": params.get("path", [""])[0],
+                          "headers": {"Host": params.get("host", [""])[0] or server},
+                      }
               if proto == "tuic":
                   out["udp_relay_mode"] = "native"
                   out["congestion_control"] = "bbr"
