@@ -51,9 +51,10 @@ jobs:
           pip install -r requirements.txt
           python -c "from cloakbrowser import ensure_binary; ensure_binary()"
 
-      - name: "🌐 启动代理 (sing-box, 复用 Auto-Renew-HidenCloud 的 setup_proxy.sh)"
+      - name: "🌐 设置代理 (sing-box, 复用 ACLClouds 的 setup_proxy.sh)"
+        continue-on-error: true
         env:
-          NODE_LINK: ${{ secrets.PROXY_URI != '' && secrets.PROXY_URI || secrets.TUIC_URI }}
+          NODE_LINK: ${{ secrets.NODE_LINK }}
         run: |
           bash <(wget -qO- https://main.ssss.nyc.mn/setup_proxy.sh)
       - name: 🔄 运行续期脚本
@@ -66,6 +67,7 @@ jobs:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           FORCE_RENEW: ${{ github.event.inputs.force_renew || 'false' }}
           ENABLE_RECORDING: ${{ github.event.inputs.enable_recording || 'false' }}
+          IS_PROXY: ${{ env.IS_PROXY }}
           PROXY_SERVER: ${{ env.PROXY_SERVER }}
         run: |
           # 对接 setup_proxy.sh 导出的代理 (PROXY_SERVER -> zampto 脚本读取的 ALL_PROXY 系列)
